@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from database.models import User, RequestLog, UserSubscription, SubscriptionPlan
@@ -17,8 +17,8 @@ class RateLimitService:
             and_(
                 UserSubscription.user_id == user.id,
                 UserSubscription.active == True,
-                UserSubscription.start_date <= datetime.utcnow(),
-                (UserSubscription.end_date.is_(None) | (UserSubscription.end_date > datetime.utcnow()))
+                UserSubscription.start_date <= datetime.now(UTC),
+                (UserSubscription.end_date.is_(None) | (UserSubscription.end_date > datetime.now(UTC)))
             )
         )
 
@@ -27,13 +27,13 @@ class RateLimitService:
 
         if not subscription_data:
             # No active subscription - create default free plan if needed
-            await RateLimitService._ensure_free_plan(db, user)
+            await RateLimitService.ensure_free_plan(db, user)
             return False
 
         subscription, plan = subscription_data
 
         # Check daily limit
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
         daily_requests = await db.execute(
             select(func.count(RequestLog.id)).where(
                 and_(
@@ -51,7 +51,7 @@ class RateLimitService:
             )
 
         # Check per-minute limit
-        minute_ago = datetime.utcnow() - timedelta(minutes=1)
+        minute_ago = datetime.now(UTC) - timedelta(minutes=1)
         minute_requests = await db.execute(
             select(func.count(RequestLog.id)).where(
                 and_(
@@ -78,7 +78,7 @@ class RateLimitService:
         await db.commit()
 
     @staticmethod
-    async def _ensure_free_plan(db: AsyncSession, user: User):
+    async def ensure_free_plan(db: AsyncSession, user: User):
         """Ensure user has a free plan subscription"""
         # Check if free plan exists
         free_plan = await db.execute(

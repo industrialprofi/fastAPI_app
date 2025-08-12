@@ -7,16 +7,16 @@ from schemas import SenderType
 
 
 class LLMService:
-    def __init__(self):
+    def __init__(self, model: str = "gpt-4o-mini"):
         """Initialize LangChain ChatOpenAI instance"""
         self.llm = ChatOpenAI(
-            model="gpt-3.5-turbo",
+            model=model,
             temperature=0.7,
             max_tokens=1000,
-            openai_api_key=settings.openai_api_key
+            api_key=settings.openai_api_key
         )
 
-    async def generate_response(self, messages: List[Dict[str, str]], model: str = "gpt-3.5-turbo") -> str:
+    async def generate_response(self, messages: List[Dict[str, str]]) -> str:
         """Generate response using LangChain ChatOpenAI"""
         try:
             # Convert messages to LangChain format
@@ -28,7 +28,8 @@ class LLMService:
         except Exception as e:
             raise Exception(f"LLM API error: {str(e)}")
 
-    def _convert_to_langchain_messages(self, messages: List[Dict[str, str]]) -> List:
+    @staticmethod
+    def _convert_to_langchain_messages(messages: List[Dict[str, str]]) -> List:
         """Convert OpenAI format messages to LangChain messages"""
         langchain_messages = []
 

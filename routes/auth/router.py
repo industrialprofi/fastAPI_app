@@ -120,7 +120,7 @@ async def verify_email_with_token(
     await db.commit()
 
     # Create default free subscription
-    await rate_limit_service._ensure_free_plan(db, user)
+    await rate_limit_service.ensure_free_plan(db, user)
 
     return {"message": "Email verified successfully! You can now log in."}
 
@@ -160,7 +160,7 @@ async def resend_verification_email(
         return EmailVerificationResponse(
             message="Verification email sent! Please check your inbox."
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to send verification email"
@@ -211,6 +211,11 @@ async def oauth_callback(
             emails = email_resp.json()
             primary_email = next((email['email'] for email in emails if email['primary']), None)
             user_info['email'] = primary_email
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported OAuth provider"
+            )
 
         # Add token info to user_info
         user_info['access_token'] = token.get('access_token')

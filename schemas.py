@@ -4,6 +4,12 @@ from datetime import datetime
 from enum import Enum
 
 
+class SenderType(str, Enum):
+    user = "user"
+    assistant = "assistant"
+    system = "system"
+
+
 class MessageResponse(BaseModel):
     id: int
     sender_type: SenderType
@@ -63,12 +69,6 @@ class UserSubscriptionResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class SenderType(str, Enum):
-    user = "user"
-    assistant = "assistant"
-    system = "system"
 
 
 # User schemas

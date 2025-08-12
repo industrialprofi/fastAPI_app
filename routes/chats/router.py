@@ -27,7 +27,6 @@ async def chat_with_llm(
     await rate_limit_service.check_rate_limit(db, current_user)
 
     # Get or create conversation
-    conversation = None
     if request.conversation_id:
         # Get existing conversation
         result = await db.execute(

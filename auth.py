@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Optional
 from authlib.integrations.starlette_client import OAuth
-from authlib.integrations.fastapi_oauth2 import AuthorizationServer
 from itsdangerous import URLSafeTimedSerializer
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
@@ -21,25 +20,27 @@ security = HTTPBearer()
 # OAuth setup
 oauth = OAuth()
 
-oauth.register(
-    name='google',
-    client_id=settings.google_client_id,
-    client_secret=settings.google_client_secret,
-    server_metadata_url='https://accounts.google.com/.well-known/openid_configuration',
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
-)
+if settings.google_client_id and settings.google_client_secret:
+    oauth.register(
+        name='google',
+        client_id=settings.google_client_id,
+        client_secret=settings.google_client_secret,
+        server_metadata_url='https://accounts.google.com/.well-known/openid_configuration',
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
 
-oauth.register(
-    name='github',
-    client_id=settings.github_client_id,
-    client_secret=settings.github_client_secret,
-    access_token_url='https://github.com/login/oauth/access_token',
-    authorize_url='https://github.com/login/oauth/authorize',
-    api_base_url='https://api.github.com/',
-    client_kwargs={'scope': 'user:email'},
-)
+if settings.github_client_id and settings.github_client_secret:
+    oauth.register(
+        name='github',
+        client_id=settings.github_client_id,
+        client_secret=settings.github_client_secret,
+        access_token_url='https://github.com/login/oauth/access_token',
+        authorize_url='https://github.com/login/oauth/authorize',
+        api_base_url='https://api.github.com/',
+        client_kwargs={'scope': 'user:email'},
+    )
 
 # Token serializer for email verification
 token_serializer = URLSafeTimedSerializer(settings.secret_key)
@@ -61,9 +62,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+        expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
