@@ -1,7 +1,7 @@
 import json
 from typing import AsyncGenerator
 
-from fastapi import HTTPException, status, Depends
+from fastapi import Depends
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -61,10 +61,7 @@ class ChatService:
 
         except Exception as e:
             await db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error generating response: {str(e)}"
-            )
+            raise Exception(f"Error generating response: {str(e)}")
 
     async def process_chat_request_stream(
             self,
@@ -137,10 +134,7 @@ class ChatService:
             conversation = result.scalar_one_or_none()
 
             if not conversation:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Conversation not found"
-                )
+                raise ValueError("Conversation not found")
             return conversation
         else:
             # Create new conversation

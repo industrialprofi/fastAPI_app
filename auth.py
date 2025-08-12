@@ -1,15 +1,18 @@
 from datetime import datetime, timedelta, UTC
 from typing import Optional
+
 from authlib.integrations.starlette_client import OAuth
+from fastapi import Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from itsdangerous import URLSafeTimedSerializer
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from database.models import User, OAuthAccount
-from database.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from config import settings
+from database.database import get_db
+from database.models import User, OAuthAccount
+from exceptions import EmailNotVerifiedException, InvalidCredentialsException
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -89,10 +92,7 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> Opti
     if not user or not user.password_hash:
         return None
     if not user.email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email not verified. Please check your email for verification link."
-        )
+        raise EmailNotVerifiedException()
     if not verify_password(password, user.password_hash):
         return None
     return user
@@ -105,24 +105,35 @@ async def get_current_user(
     """Get current authenticated user from JWT token"""
     from jose import JWTError, jwt
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
     try:
         payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=[settings.algorithm])
         user_id: int = payload.get("sub")
         if user_id is None:
-            raise credentials_exception
+            raise InvalidCredentialsException()
     except JWTError:
-        raise credentials_exception
-    
+        raise InvalidCredentialsException()
+
     user = await get_user_by_id(db, user_id=int(user_id))
     if user is None:
-        raise credentials_exception
+        raise InvalidCredentialsException()
     return user
+
+
+async def get_current_user_with_http_exception(
+        credentials: HTTPAuthorizationCredentials = Depends(security),
+        db: AsyncSession = Depends(get_db)
+) -> User:
+    """Wrapper for get_current_user that converts custom exceptions to HTTPExceptions"""
+    from fastapi import HTTPException, status
+
+    try:
+        return await get_current_user(credentials, db)
+    except InvalidCredentialsException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=e.message,
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
 
 async def create_oauth_user(db: AsyncSession, provider: str, user_info: dict) -> User:

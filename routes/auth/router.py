@@ -6,11 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import (
     get_password_hash, authenticate_user, create_access_token,
-    get_current_user, get_user_by_email, oauth, get_or_create_oauth_user
+    get_current_user_with_http_exception, get_user_by_email, oauth, get_or_create_oauth_user
 )
 from config import settings
 from database.database import get_db
 from database.models import User
+from exceptions import (
+    EmailNotVerifiedException
+)
 from schemas import (
     UserCreate, UserLogin, UserResponse, Token,
     EmailVerificationRequest, EmailVerificationResponse
@@ -72,20 +75,27 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(user_credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """Authenticate user and return access token"""
-    user = await authenticate_user(db, user_credentials.email, user_credentials.password)
-    if not user:
+    try:
+        user = await authenticate_user(db, user_credentials.email, user_credentials.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        access_token = create_access_token(
+            data={"sub": str(user.id)}, expires_delta=access_token_expires
+        )
+
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except EmailNotVerifiedException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail=e.message
         )
-    
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
-    )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/verify-email")
@@ -244,6 +254,6 @@ async def oauth_callback(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+async def get_current_user_info(current_user: User = Depends(get_current_user_with_http_exception)):
     """Get current user information"""
     return current_user

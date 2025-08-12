@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta, UTC
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select, func, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from database.models import User, RequestLog, UserSubscription, SubscriptionPlan
-from fastapi import HTTPException, status
+from exceptions import DailyLimitExceededException, MinuteLimitExceededException, NoActiveSubscriptionException
 
 
 class RateLimitService:
@@ -28,7 +30,7 @@ class RateLimitService:
         if not subscription_data:
             # No active subscription - create default free plan if needed
             await RateLimitService.ensure_free_plan(db, user)
-            return False
+            raise NoActiveSubscriptionException()
 
         subscription, plan = subscription_data
 
@@ -45,10 +47,7 @@ class RateLimitService:
         daily_count = daily_requests.scalar() or 0
 
         if daily_count >= plan.requests_per_day:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Daily limit exceeded. Plan allows {plan.requests_per_day} requests per day."
-            )
+            raise DailyLimitExceededException(plan.requests_per_day)
 
         # Check per-minute limit
         minute_ago = datetime.now(UTC) - timedelta(minutes=1)
@@ -63,10 +62,7 @@ class RateLimitService:
         minute_count = minute_requests.scalar() or 0
 
         if minute_count >= plan.requests_per_minute:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Rate limit exceeded. Plan allows {plan.requests_per_minute} requests per minute."
-            )
+            raise MinuteLimitExceededException(plan.requests_per_minute)
 
         return True
 
