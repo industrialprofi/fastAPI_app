@@ -1,21 +1,22 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import timedelta
 
+from auth import (
+    get_password_hash, authenticate_user, create_access_token,
+    get_current_user, get_user_by_email, oauth, get_or_create_oauth_user
+)
+from config import settings
 from database.database import get_db
 from database.models import User
 from schemas import (
     UserCreate, UserLogin, UserResponse, Token,
     EmailVerificationRequest, EmailVerificationResponse
 )
-from auth import (
-    get_password_hash, authenticate_user, create_access_token,
-    get_current_user, get_user_by_email, oauth, get_or_create_oauth_user
-)
-from services.rate_limit import get_rate_limit_service, RateLimitService
 from services.email_service import get_email_service, EmailService
-from config import settings
+from services.rate_limit import get_rate_limit_service, RateLimitService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -167,7 +168,7 @@ async def resend_verification_email(
         )
 
 
-@router.get("/{provider}")
+@router.get("/login/{provider}")
 async def oauth_login(provider: str, request: Request):
     """Initiate OAuth login with provider (google, github)"""
     if provider not in ['google', 'github']:
