@@ -145,6 +145,10 @@ class ChatService:
             )
             db.add(conversation)
             await db.flush()
+
+            # Add system message as the first message in new conversations
+            await self._add_system_message(conversation, db)
+
             return conversation
 
     async def _add_user_message(
@@ -177,6 +181,21 @@ class ChatService:
         )
         db.add(assistant_message)
         return assistant_message
+
+    @staticmethod
+    async def _add_system_message(
+            conversation: Conversation,
+            db: AsyncSession
+    ) -> Message:
+        """Add system message to conversation"""
+        system_message = Message(
+            conversation_id=conversation.id,
+            sender_type=SenderType.system,
+            content="You are here to assist the user with their queries. "  # TODO add real prompts
+        )
+        db.add(system_message)
+        await db.flush()
+        return system_message
 
     async def _get_conversation_messages(
             self,
