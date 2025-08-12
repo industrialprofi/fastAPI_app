@@ -1,14 +1,13 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from auth import get_current_user
 from database.database import get_db
 from database.models import User, Conversation
 from schemas import ConversationCreate, ConversationUpdate, ConversationResponse
+from services.conversations_service import ConversationsService
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -38,13 +37,7 @@ async def get_conversations(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all conversations for the current user"""
-    result = await db.execute(
-        select(Conversation)
-        .options(selectinload(Conversation.messages))
-        .where(Conversation.user_id == current_user.id)
-        .order_by(Conversation.created_at.desc())
-    )
-    conversations = result.scalars().all()
+    conversations = await ConversationsService.conversations_get(db, current_user.id)
     return conversations
 
 
@@ -55,17 +48,8 @@ async def get_conversation(
     db: AsyncSession = Depends(get_db)
 ):
     """Get a specific conversation with all messages"""
-    result = await db.execute(
-        select(Conversation)
-        .options(selectinload(Conversation.messages))
-        .where(
-            and_(
-                Conversation.id == conversation_id,
-                Conversation.user_id == current_user.id
-            )
-        )
-    )
-    conversation = result.scalar_one_or_none()
+
+    conversation = ConversationsService.conversation_get(db, current_user.id)
 
     if not conversation:
         raise HTTPException(
@@ -79,22 +63,12 @@ async def get_conversation(
 @router.put("/{conversation_id}", response_model=ConversationResponse)
 async def update_conversation(
         conversation_id: int,
-        conversation_data: ConversationUpdate,
+        data_to_update: ConversationUpdate,
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)
 ):
     """Update a conversation's title"""
-    result = await db.execute(
-        select(Conversation)
-        .options(selectinload(Conversation.messages))
-        .where(
-            and_(
-                Conversation.id == conversation_id,
-                Conversation.user_id == current_user.id
-            )
-        )
-    )
-    conversation = result.scalar_one_or_none()
+    conversation = await ConversationsService.conversation_update(db, conversation_id, current_user.id)
 
     if not conversation:
         raise HTTPException(
@@ -103,8 +77,8 @@ async def update_conversation(
         )
 
     # Update the title if provided
-    if conversation_data.title is not None:
-        conversation.title = conversation_data.title
+    if data_to_update.title is not None:
+        conversation.title = data_to_update.title
 
     await db.commit()
     await db.refresh(conversation, ["messages"])
@@ -119,15 +93,7 @@ async def delete_conversation(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a conversation"""
-    result = await db.execute(
-        select(Conversation).where(
-            and_(
-                Conversation.id == conversation_id,
-                Conversation.user_id == current_user.id
-            )
-        )
-    )
-    conversation = result.scalar_one_or_none()
+    conversation = await ConversationsService.conversation_delete(db, conversation_id, current_user.id)
 
     if not conversation:
         raise HTTPException(

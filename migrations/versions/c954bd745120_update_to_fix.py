@@ -1,17 +1,15 @@
 """updated_at_fix
 
 Revision ID: c954bd745120
-Revises: 1e0e67ae54f0
-Create Date: 2025-08-12 19:44:37.190229
+Revises: 63245eb84324
+Create Date: 2025-08-12 23:15
 
 """
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision = 'c954bd745120'
-down_revision = '1e0e67ae54f0'
+down_revision = '63245eb84324'
 branch_labels = None
 depends_on = None
 

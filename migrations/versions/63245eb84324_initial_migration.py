@@ -1,16 +1,15 @@
-"""init
+"""Initial migration
 
-Revision ID: 1e0e67ae54f0
+Revision ID: 63245eb84324
 Revises: 
-Create Date: 2025-08-12 18:53:10.657394
+Create Date: 2025-08-12 22:56:06.783871
 
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = '1e0e67ae54f0'
+revision = '63245eb84324'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -35,6 +34,7 @@ def upgrade() -> None:
     sa.Column('email_verification_token', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+                    sa.Column('is_admin', sa.Boolean(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
