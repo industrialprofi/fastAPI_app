@@ -16,6 +16,26 @@ class ChatService:
     def __init__(self, llm_service: LLMService, rate_limit_service: RateLimitService):
         self.llm_service = llm_service
         self.rate_limit_service = rate_limit_service
+        # TODO Define the system message that will be added to all conversations
+        self.system_message = "You are a helpful assistant. Answer questions based on the conversation history and provide accurate information."
+
+    def _add_system_message_to_formatted_messages(self, formatted_messages: list[dict[str, str]]) -> list[
+        dict[str, str]]:
+        """Add system message to the beginning of formatted messages without saving to database"""
+        system_message = {
+            "role": "system",
+            "content": self.system_message
+        }
+
+        # Check if there's already a system message at the beginning
+        if formatted_messages and formatted_messages[0].get("role") == "system":
+            # Replace the first system message with ours
+            formatted_messages[0] = system_message
+        else:
+            # Add our system message at the beginning
+            formatted_messages.insert(0, system_message)
+
+        return formatted_messages
 
     async def process_chat_request(
             self,
@@ -40,9 +60,12 @@ class ChatService:
         # Format messages for LLM
         formatted_messages = self.llm_service.format_conversation_for_llm(messages)
 
+        # Add system message
+        formatted_messages_with_system = self._add_system_message_to_formatted_messages(formatted_messages)
+
         try:
             # Get LLM response
-            llm_response = await self.llm_service.generate_response(formatted_messages)
+            llm_response = await self.llm_service.generate_response(formatted_messages_with_system)
 
             # Add assistant message to conversation
             assistant_message = await self._add_assistant_message(llm_response, conversation, db)
@@ -86,13 +109,16 @@ class ChatService:
         # Format messages for LLM
         formatted_messages = self.llm_service.format_conversation_for_llm(messages)
 
+        # Add system message to the beginning (not saved to database)
+        formatted_messages_with_system = self._add_system_message_to_formatted_messages(formatted_messages)
+
         try:
             # Send initial metadata
             yield f"data: {json.dumps({'type': 'metadata', 'conversation_id': conversation.id, 'message_id': user_message.id})}\n\n"
 
             # Stream LLM response
             full_response = ""
-            async for chunk in self.llm_service.generate_response_stream(formatted_messages):
+            async for chunk in self.llm_service.generate_response_stream(formatted_messages_with_system):
                 full_response += chunk
                 yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
 
