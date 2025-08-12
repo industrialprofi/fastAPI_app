@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
-from sqlalchemy.orm import selectinload
 from typing import List
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from auth import get_current_user
 from database.database import get_db
 from database.models import User, Conversation
-from schemas import ConversationCreate, ConversationResponse
-from auth import get_current_user
+from schemas import ConversationCreate, ConversationUpdate, ConversationResponse
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -26,7 +27,7 @@ async def create_conversation(
 
     db.add(conversation)
     await db.commit()
-    await db.refresh(conversation)
+    await db.refresh(conversation, ["messages"])
 
     return conversation
 
@@ -71,6 +72,42 @@ async def get_conversation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found"
         )
+
+    return conversation
+
+
+@router.put("/{conversation_id}", response_model=ConversationResponse)
+async def update_conversation(
+        conversation_id: int,
+        conversation_data: ConversationUpdate,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+):
+    """Update a conversation's title"""
+    result = await db.execute(
+        select(Conversation)
+        .options(selectinload(Conversation.messages))
+        .where(
+            and_(
+                Conversation.id == conversation_id,
+                Conversation.user_id == current_user.id
+            )
+        )
+    )
+    conversation = result.scalar_one_or_none()
+
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+
+    # Update the title if provided
+    if conversation_data.title is not None:
+        conversation.title = conversation_data.title
+
+    await db.commit()
+    await db.refresh(conversation, ["messages"])
 
     return conversation
 

@@ -1,7 +1,8 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+from typing import Optional, List
+
+from pydantic import BaseModel, EmailStr
 
 
 class SenderType(str, Enum):
@@ -25,6 +26,10 @@ class ConversationCreate(BaseModel):
     title: Optional[str] = None
 
 
+class ConversationUpdate(BaseModel):
+    title: Optional[str] = None
+
+
 class ConversationResponse(BaseModel):
     id: int
     title: Optional[str]
@@ -39,7 +44,6 @@ class ConversationResponse(BaseModel):
 class LLMRequest(BaseModel):
     message: str
     conversation_id: Optional[int] = None
-    new_conversation_title: Optional[str] = None
 
 
 class LLMResponse(BaseModel):
