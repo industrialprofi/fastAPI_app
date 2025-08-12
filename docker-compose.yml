@@ -22,7 +22,7 @@ services:
 
   # FastAPI Application
   app:
-    build: .
+    image: ghcr.io/industrialprofi/fastapi_app/main:main
     container_name: ai_fastapi_app
     environment:
       - DATABASE_URL=postgresql+asyncpg://ai_user:ai_password@postgres:5432/ai_fastapi_db
