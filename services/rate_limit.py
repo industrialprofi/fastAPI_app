@@ -12,6 +12,9 @@ class RateLimitService:
     async def check_rate_limit(db: AsyncSession, user: User) -> bool:
         """Check if user can make a request based on their subscription plan"""
 
+        if user.is_admin:
+            return True
+
         # Get user's active subscription
         subscription_query = select(UserSubscription, SubscriptionPlan).join(
             SubscriptionPlan, UserSubscription.plan_id == SubscriptionPlan.id
