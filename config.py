@@ -3,11 +3,11 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    DB_HOST: str
-    DB_PORT: int
-    DB_USER: str
-    DB_PASS: str
-    DB_NAME: str
+    DB_HOST: str = 'localhost'
+    DB_PORT: int = 5432
+    DB_USER: str = 'ai_user'
+    DB_PASS: str = 'ai_password'
+    DB_NAME: str = 'ai_fastapi_db'
 
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
