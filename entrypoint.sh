@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 echo "Waiting for PostgreSQL at $POSTGRES_HOST:$POSTGRES_PORT..."
