@@ -140,17 +140,40 @@ New users automatically get a Free subscription.
 ## Project Structure
 
 ```
-├── main.py              # FastAPI application and routes
-├── models.py            # SQLAlchemy database models
-├── schemas.py           # Pydantic schemas for request/response validation
-├── database.py          # Database connection and session management
-├── auth.py              # Authentication logic (JWT, password hashing)
-├── rate_limit.py        # Rate limiting service
-├── llm_service.py       # OpenAI LLM integration
+├── main.py              # FastAPI application entry point
+├── auth.py              # Authentication utilities
 ├── config.py            # Application configuration
-├── setup_db.py          # Database initialization script
+├── schemas.py           # Pydantic schemas for request/response validation
+├── exceptions.py        # Custom exception classes
 ├── requirements.txt     # Python dependencies
-└── README.md           # This file
+├── Dockerfile           # Docker container configuration
+├── docker-compose.yml   # Docker compose setup
+├── entrypoint.sh        # Docker entrypoint script
+├── alembic.ini          # Alembic migration configuration
+├── README.md           # This file
+├── database/
+│   ├── database.py      # Database connection and session management
+│   └── models.py        # SQLAlchemy database models
+├── routes/
+│   ├── auth/
+│   │   └── router.py    # Authentication routes
+│   ├── chats/
+│   │   └── router.py    # Chat management routes
+│   ├── conversations/
+│   │   └── router.py    # Conversation routes
+│   └── subscriptions/
+│       └── router.py    # Subscription management routes
+├── services/
+│   ├── chat_service.py  # Chat business logic
+│   ├── conversations_service.py # Conversation management
+│   ├── email_service.py # Email notifications
+│   ├── llm_service.py   # OpenAI LLM integration
+│   └── rate_limit.py    # Rate limiting service
+├── migrations/          # Alembic database migrations
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+└── tests/              # Test files
 ```
 
 ## Development
