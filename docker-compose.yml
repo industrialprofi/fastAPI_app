@@ -26,6 +26,9 @@ services:
     container_name: ai_fastapi_app
     environment:
       - DATABASE_URL=postgresql+asyncpg://ai_user:ai_password@postgres:5432/ai_fastapi_db
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=ai_user
       - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
