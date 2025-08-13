@@ -4,7 +4,6 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: ai_fastapi_postgres
     environment:
       POSTGRES_DB: ai_fastapi_db
       POSTGRES_USER: ai_user
@@ -23,9 +22,12 @@ services:
   # FastAPI Application
   app:
     image: ghcr.io/industrialprofi/fastapi_app/main:main
-    container_name: ai_fastapi_app
     environment:
-      - DATABASE_URL=postgresql+asyncpg://ai_user:ai_password@postgres:5432/ai_fastapi_db
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-ai_user}
+      - DB_PASS=${DB_PASS:-ai_password}
+      - DB_NAME=${DB_NAME:-ai_fastapi_db}
       - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-in-production}
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
